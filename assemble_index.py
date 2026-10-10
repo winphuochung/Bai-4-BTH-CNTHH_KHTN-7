@@ -1496,6 +1496,9 @@ html_head = """<!DOCTYPE html>
           <button class="btn-secondary" id="btnPrevQ" onclick="navigateQuestion(-1)">
             <i class="fa-solid fa-arrow-left"></i> Câu Trước
           </button>
+          <button class="btn-gradient" id="btnSubmitQuiz" onclick="openSubmitConfirmModal()" style="background: linear-gradient(135deg, #10b981, #06b6d4); width: auto; padding: 10px 22px; font-weight: 700; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Nộp Bài (Google Sheet)
+          </button>
           <button class="btn-gradient" id="btnNextQ" onclick="navigateQuestion(1)" style="width: auto; padding: 10px 24px;">
             <span>Câu Tiếp Theo</span> <i class="fa-solid fa-arrow-right"></i>
           </button>
@@ -1535,6 +1538,9 @@ html_head = """<!DOCTYPE html>
         </div>
 
         <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 2rem;">
+          <button class="btn-gradient" id="btnSyncResultSheet" onclick="syncScoreToGoogleSheet(true)" style="background: linear-gradient(135deg, #10b981, #06b6d4); width: auto; padding: 12px 24px; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Đồng Bộ Lại Google Sheet
+          </button>
           <button class="btn-gradient" onclick="exportResultImage()" style="width: auto; padding: 12px 24px;">
             <i class="fa-solid fa-download"></i> Tải Báo Cáo Kết Quả (Ảnh)
           </button>
@@ -1542,6 +1548,7 @@ html_head = """<!DOCTYPE html>
             <i class="fa-solid fa-rotate-left"></i> Làm Lại Bài Kiểm Tra
           </button>
         </div>
+        <div id="syncStatusAlert" style="margin-top: 1.2rem; font-size: 0.92rem; font-weight: 600; display: none; align-items: center; justify-content: center; gap: 8px;"></div>
       </div>
     </section>
 
@@ -1568,6 +1575,46 @@ html_head = """<!DOCTYPE html>
       </div>
     </section>
 
+      <!-- MODAL XÁC NHẬN NỘP BÀI THI & ĐỒNG BỘ GOOGLE SHEET -->
+    <div id="modalSubmitConfirm" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; padding: 1rem;">
+      <div class="glass-card" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.2); max-width: 480px; width: 100%; border-radius: var(--radius-lg); padding: 2.2rem 2rem; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem; font-size: 2rem; color: #fff; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.45);">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <h3 style="font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">NỘP BÀI THI & ĐỒNG BỘ</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem; line-height: 1.5;">
+          Điểm số và kết quả làm bài của em sẽ được lưu tự động vào <strong>Google Sheet</strong> của giáo viên!
+        </p>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1.5rem; text-align: left; font-size: 0.92rem;">
+          <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Học sinh:</span>
+            <strong id="modalSubStudent" style="color: #fff;">Nguyễn Văn A</strong>
+          </div>
+          <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Lớp:</span>
+            <strong id="modalSubClass" style="color: #fff;">7A1</strong>
+          </div>
+          <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Số câu đã làm:</span>
+            <strong id="modalSubDone" style="color: #38bdf8;">0 / 50 câu</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Điểm số ước tính:</span>
+            <strong id="modalSubScore" style="color: #34d399; font-size: 1.15rem;">0 điểm</strong>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn-secondary" onclick="closeSubmitConfirmModal()" style="padding: 10px 20px;">
+            <i class="fa-solid fa-pen"></i> Làm Tiếp
+          </button>
+          <button type="button" class="btn-gradient" id="btnConfirmSubmitNow" onclick="executeFinalSubmit()" style="background: linear-gradient(135deg, #10b981, #06b6d4); padding: 10px 24px; font-weight: 700; width: auto; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);">
+            <i class="fa-solid fa-paper-plane"></i> Xác Nhận Nộp Bài
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -2380,8 +2427,143 @@ html_tail = """
     // =========================================================================
     // 6. RESULTS, CERTIFICATE & STORAGE
     // =========================================================================
+    function openSubmitConfirmModal() {
+      const modal = document.getElementById('modalSubmitConfirm');
+      if (!modal) {
+        showQuizFinalResult();
+        return;
+      }
+
+      const totalAnswers = Object.keys(userAnswers).length;
+      let correctAnswers = 0;
+      Object.values(userAnswers).forEach(ans => {
+        if (ans.isCorrect) correctAnswers++;
+      });
+      const finalScore = Math.round((correctAnswers / QUIZ_DATA.length) * 100);
+
+      const stuEl = document.getElementById('modalSubStudent');
+      const clsEl = document.getElementById('modalSubClass');
+      const doneEl = document.getElementById('modalSubDone');
+      const scoreEl = document.getElementById('modalSubScore');
+
+      if (stuEl) stuEl.textContent = currentUser.name || 'Học sinh ẩn danh';
+      if (clsEl) clsEl.textContent = currentUser.className || '7';
+      if (doneEl) doneEl.textContent = `${totalAnswers} / ${QUIZ_DATA.length} câu`;
+      if (scoreEl) scoreEl.textContent = `${finalScore} / 100 điểm`;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeSubmitConfirmModal() {
+      const modal = document.getElementById('modalSubmitConfirm');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function executeFinalSubmit() {
+      closeSubmitConfirmModal();
+      showQuizFinalResult();
+    }
+
+    async function syncScoreToGoogleSheet(isManual = false) {
+      const statusEl = document.getElementById('syncStatusAlert');
+      const btnSync = document.getElementById('btnSyncResultSheet');
+
+      const totalAnswers = Object.keys(userAnswers).length;
+      let correctAnswers = 0;
+      Object.values(userAnswers).forEach(ans => {
+        if (ans.isCorrect) correctAnswers++;
+      });
+      const finalScore = Math.round((correctAnswers / QUIZ_DATA.length) * 100);
+      const accuracy = `${Math.round((correctAnswers / (totalAnswers || 1)) * 100)}%`;
+      const evaluation = finalScore >= 80 ? 'Xuất sắc' : finalScore >= 60 ? 'Khá tốt' : 'Cần cố gắng';
+
+      const payload = {
+        name: currentUser.name || 'Học sinh ẩn danh',
+        className: currentUser.className || '7',
+        score: finalScore,
+        correctCount: correctAnswers,
+        completedCount: totalAnswers,
+        totalQuestions: QUIZ_DATA.length,
+        accuracy: accuracy,
+        evaluation: evaluation,
+        submittedAt: new Date().toLocaleString('vi-VN')
+      };
+
+      if (statusEl) {
+        statusEl.style.display = 'flex';
+        statusEl.style.color = '#38bdf8';
+        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đồng bộ kết quả lên Google Sheet...';
+      }
+      if (btnSync) btnSync.disabled = true;
+
+      // Kỹ thuật 1: Nếu đang chạy trực tiếp trong Google Apps Script
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (statusEl) {
+              statusEl.style.color = '#34d399';
+              statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đã đồng bộ điểm thành công vào Google Sheet!';
+            }
+            if (btnSync) btnSync.disabled = false;
+            if (isManual) alert(`Đã đồng bộ thành công kết quả bài thi của em ${payload.name} (${payload.score} điểm) vào Google Sheet!`);
+          })
+          .withFailureHandler(function(err) {
+            console.warn('google.script.run failed, fallback to fetch:', err);
+            sendViaFetchSync(payload, statusEl, btnSync, isManual);
+          })
+          .saveSubmissionDirect(payload);
+        return;
+      }
+
+      // Kỹ thuật 2: Chạy qua fetch với no-cors (hỗ trợ Vercel, localhost, iframe)
+      await sendViaFetchSync(payload, statusEl, btnSync, isManual);
+    }
+
+    async function sendViaFetchSync(payload, statusEl, btnSync, isManual) {
+      const targetUrl = APPS_SCRIPT_URL;
+      if (!targetUrl || !targetUrl.startsWith('http')) {
+        if (statusEl) {
+          statusEl.style.color = '#fbbf24';
+          statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Điểm số đã lưu vào thiết bị (Chưa cấu hình URL Google Sheet).';
+        }
+        if (btnSync) btnSync.disabled = false;
+        return;
+      }
+
+      try {
+        await fetch(targetUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (statusEl) {
+          statusEl.style.color = '#34d399';
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đã gửi điểm số và đồng bộ Google Sheet thành công!';
+        }
+        if (btnSync) btnSync.disabled = false;
+        if (isManual) {
+          alert(`Đã gửi kết quả bài thi của em ${payload.name} (${payload.score} điểm) vào Google Sheet!`);
+        }
+      } catch (err) {
+        console.error('Fetch sync error:', err);
+        if (statusEl) {
+          statusEl.style.color = '#f87171';
+          statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Kết nối mạng gián đoạn. Điểm đã được lưu trong bộ nhớ máy!';
+        }
+        if (btnSync) btnSync.disabled = false;
+      }
+    }
+
     function showQuizFinalResult() {
       switchView('result');
+      // Tự động đồng bộ lên Google Sheet khi nộp bài
+      setTimeout(() => {
+        syncScoreToGoogleSheet(false);
+      }, 300);
       
       const totalAnswers = Object.keys(userAnswers).length;
       let correctAnswers = 0;
