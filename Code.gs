@@ -3,6 +3,22 @@
  * Hỗ trợ đồng bộ kết quả bài thi học sinh trực tiếp vào Google Sheets.
  */
 
+// CẤU HÌNH (Tùy chọn): Nếu bạn muốn nộp vào một file Google Sheet có sẵn, hãy dán ID hoặc Link file vào đây (để trống nếu muốn script tự động tạo mới):
+var GOOGLE_SHEET_URL = ""; 
+
+/**
+ * 1. HÀM KÍCH HOẠT & CẤP QUYỀN (DÙNG ĐỂ BẤM "CHẠY" TRÊN THANH CÔNG CỤ APPS SCRIPT)
+ * Chọn hàm KHOI_TAO_HE_THONG và bấm nút "Chạy" để cấp quyền và lấy link Google Sheet.
+ */
+function KHOI_TAO_HE_THONG() {
+  var ss = layHoacTaoBangTinh();
+  Logger.log("==================================================");
+  Logger.log("✅ KÍCH HOẠT HỆ THỐNG THÀNH CÔNG!");
+  Logger.log("📊 LINK BẢNG TÍNH GOOGLE SHEET: " + ss.getUrl());
+  Logger.log("==================================================");
+  return "Kích hoạt thành công: " + ss.getUrl();
+}
+
 function doGet(e) {
   var possibleNames = ['Index', 'index', 'Index.html', 'index.html', 'Page', 'page', 'Trangchu', 'Home', 'home'];
   var htmlOutput = null;
@@ -47,21 +63,50 @@ function doPost(e) {
   }
 }
 
-function recordSubmission(data) {
+function layHoacTaoBangTinh() {
   var ss = null;
-  try {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  } catch (e) {}
 
-  if (!ss) {
-    var files = DriveApp.getFilesByName("Diem_So_KHTN7_Bang_Tuan_Hoan");
-    if (files.hasNext()) {
-      ss = SpreadsheetApp.open(files.next());
-    } else {
-      ss = SpreadsheetApp.create("Diem_So_KHTN7_Bang_Tuan_Hoan");
+  // 1. Thử lấy từ biến cấu hình GOOGLE_SHEET_URL nếu người dùng điền
+  if (GOOGLE_SHEET_URL && GOOGLE_SHEET_URL.trim() !== "") {
+    try {
+      var trimmed = GOOGLE_SHEET_URL.trim();
+      if (trimmed.indexOf("http") === 0) {
+        ss = SpreadsheetApp.openByUrl(trimmed);
+      } else {
+        ss = SpreadsheetApp.openById(trimmed);
+      }
+    } catch (e) {
+      Logger.log("Không mở được bằng GOOGLE_SHEET_URL: " + e);
     }
   }
 
+  // 2. Thử lấy bảng tính mẹ nếu Apps Script được tạo từ Google Sheets
+  if (!ss) {
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (e) {}
+  }
+
+  // 3. Thử lấy ID đã lưu trong ScriptProperties
+  var scriptProps = PropertiesService.getScriptProperties();
+  if (!ss) {
+    var savedId = scriptProps.getProperty("SHEET_ID");
+    if (savedId) {
+      try {
+        ss = SpreadsheetApp.openById(savedId);
+      } catch (e) {
+        Logger.log("Bảng tính cũ không còn tồn tại, sẽ tạo mới...");
+      }
+    }
+  }
+
+  // 4. Nếu chưa có, tự động tạo mới hoàn toàn (CHỈ CẦN QUYỀN SPREADSHEET, KHÔNG CẦN DRIVEAPP)
+  if (!ss) {
+    ss = SpreadsheetApp.create("Diem_So_KHTN7_Bang_Tuan_Hoan");
+    scriptProps.setProperty("SHEET_ID", ss.getId());
+  }
+
+  // Khởi tạo tab và tiêu đề cột
   var sheetName = "DiemSo_KHTN7";
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
@@ -88,6 +133,13 @@ function recordSubmission(data) {
     sheet.setFrozenRows(1);
   }
 
+  return ss;
+}
+
+function recordSubmission(data) {
+  var ss = layHoacTaoBangTinh();
+  var sheet = ss.getSheetByName("DiemSo_KHTN7") || ss.getActiveSheet();
+
   var timeStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
   var row = [
     timeStr,
@@ -112,6 +164,7 @@ function recordSubmission(data) {
   return {
     status: "success",
     message: "Đã đồng bộ thành công vào Google Sheet!",
+    sheetUrl: ss.getUrl(),
     row: lastRow
   };
 }
