@@ -626,11 +626,16 @@
       padding: 1.6rem;
       text-align: center;
       margin-top: 1.8rem;
+      overflow: hidden;
     }
     #atomCanvas {
       max-width: 100%;
+      height: auto;
+      aspect-ratio: 5 / 4;
       background: transparent;
       border-radius: var(--radius-md);
+      display: block;
+      margin: 0 auto;
     }
     .sim-controls {
       display: flex;
@@ -638,21 +643,39 @@
       gap: 10px;
       margin-top: 1.2rem;
       flex-wrap: wrap;
+      min-height: 48px;
     }
     .sim-btn {
-      padding: 7px 16px;
+      padding: 8px 16px;
       border-radius: 20px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--glass-border);
-      color: #fff;
+      color: #cbd5e1;
       font-size: 0.85rem;
+      font-weight: 600; /* Co dinh font-weight de khong bi nhay giat layout */
       cursor: pointer;
-      transition: var(--transition);
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
+      user-select: none;
     }
-    .sim-btn.active, .sim-btn:hover {
-      background: var(--accent-cyan);
-      color: #0f172a;
-      font-weight: 700;
+    .sim-btn.active {
+      background: var(--accent-cyan) !important;
+      color: #041019 !important;
+      border-color: #38bdf8 !important;
+      font-weight: 600;
+      box-shadow: 0 0 16px var(--accent-cyan-glow);
+    }
+    .sim-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    #atomSimInfo {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.5;
     }
 
     /* Mini Periodic Table Matrix */
@@ -1398,12 +1421,12 @@
           </p>
 
           <div class="sim-controls">
-            <button class="sim-btn active" onclick="setSimElement('H')">1. Hydrogen (1e, 1 lớp)</button>
-            <button class="sim-btn" onclick="setSimElement('He')">2. Helium (2e, 1 lớp)</button>
-            <button class="sim-btn" onclick="setSimElement('C')">6. Carbon (6e, 2 lớp)</button>
-            <button class="sim-btn" onclick="setSimElement('O')">8. Oxygen (8e, 2 lớp)</button>
-            <button class="sim-btn" onclick="setSimElement('Na')">11. Sodium (11e, 3 lớp)</button>
-            <button class="sim-btn" onclick="setSimElement('Cl')">17. Chlorine (17e, 3 lớp)</button>
+            <button type="button" class="sim-btn active" data-sym="H" onclick="setSimElement('H')">1. Hydrogen (1e, 1 lớp)</button>
+            <button type="button" class="sim-btn" data-sym="He" onclick="setSimElement('He')">2. Helium (2e, 1 lớp)</button>
+            <button type="button" class="sim-btn" data-sym="C" onclick="setSimElement('C')">6. Carbon (6e, 2 lớp)</button>
+            <button type="button" class="sim-btn" data-sym="O" onclick="setSimElement('O')">8. Oxygen (8e, 2 lớp)</button>
+            <button type="button" class="sim-btn" data-sym="Na" onclick="setSimElement('Na')">11. Sodium (11e, 3 lớp)</button>
+            <button type="button" class="sim-btn" data-sym="Cl" onclick="setSimElement('Cl')">17. Chlorine (17e, 3 lớp)</button>
           </div>
 
           <div style="margin-top: 1.5rem; display: flex; justify-content: center;">
@@ -2488,65 +2511,93 @@ const QUIZ_DATA = [
 
     let simTarget = ELEMENTS_20[0];
     let animAngle = 0;
+    let simAnimId = null;
 
     function initAtomSimulator() {
       const canvas = document.getElementById('atomCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
 
+      // Huy bo vong lap cu neu co de chong trung lap frame gay giat
+      if (simAnimId) {
+        cancelAnimationFrame(simAnimId);
+        simAnimId = null;
+      }
+
       function drawSim() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
+        // 1. Hat nhan (Proton & Neutron)
+        // Vung sang hat nhan
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
-        const grad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, 24);
-        grad.addColorStop(0, '#f43f5e');
+        ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+        ctx.fill();
+
+        // Hat nhan chinh
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(centerX - 4, centerY - 4, 3, centerX, centerY, 22);
+        grad.addColorStop(0, '#fb7185');
         grad.addColorStop(1, '#9f1239');
         ctx.fillStyle = grad;
-        ctx.shadowColor = '#f43f5e';
-        ctx.shadowBlur = 15;
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px Plus Jakarta Sans';
+        // Chu so proton trong hat nhan
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px "Be Vietnam Pro", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${simTarget.z}p`, centerX, centerY);
+        ctx.fillText(`+${simTarget.z}`, centerX, centerY);
 
-        const shellRadii = [60, 110, 155, 190];
+        // 2. Cac quy dao & electron quay muot ma
+        const shellRadii = [60, 105, 150, 185];
         simTarget.shells.forEach((electronCount, shellIdx) => {
           const r = shellRadii[shellIdx];
 
+          // Duong quy dao elip / tron
           ctx.beginPath();
           ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+          ctx.setLineDash([5, 5]);
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ctx.setLineDash([]);
 
-          const speedMultiplier = (shellIdx + 1) * 0.7;
+          // Toc do quay hai hoa (lop trong nhanh nhe, lop ngoai quay cham tinh te)
+          const speedMultiplier = 1.0 - (shellIdx * 0.18);
           for (let e = 0; e < electronCount; e++) {
-            const theta = animAngle * speedMultiplier + (e * 2 * Math.PI / electronCount);
+            const theta = (animAngle * speedMultiplier) + (e * 2 * Math.PI / electronCount);
             const ex = centerX + r * Math.cos(theta);
             const ey = centerY + r * Math.sin(theta);
 
+            // Vien quang sang electron (thay the shadowBlur cuc ky tiet kiem GPU)
             ctx.beginPath();
-            ctx.arc(ex, ey, 7, 0, Math.PI * 2);
-            ctx.fillStyle = '#06b6d4';
-            ctx.shadowColor = '#06b6d4';
-            ctx.shadowBlur = 10;
+            ctx.arc(ex, ey, 9, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.28)';
             ctx.fill();
-            ctx.shadowBlur = 0;
+
+            // Hat electron chinh
+            ctx.beginPath();
+            ctx.arc(ex, ey, 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fill();
+
+            // Diem sang loi electron tao cam giac 3D
+            ctx.beginPath();
+            ctx.arc(ex - 1.5, ey - 1.5, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
           }
         });
 
-        animAngle += 0.015;
-        requestAnimationFrame(drawSim);
+        // Tang goc quay muot ma
+        animAngle += 0.009;
+        simAnimId = requestAnimationFrame(drawSim);
       }
+
       drawSim();
     }
 
@@ -2554,13 +2605,16 @@ const QUIZ_DATA = [
       const elm = ELEMENTS_20.find(e => e.sym === symbol);
       if (!elm) return;
       simTarget = elm;
+
       const info = document.getElementById('atomSimInfo');
       if (info) {
-        info.textContent = `Đang hiển thị nguyên tố: ${elm.name} (${elm.sym}) - Số hạt proton: ${elm.z}, Tổng electron: ${elm.z}, Phân bố lớp electron: [${elm.shells.join(', ')}]`;
+        info.innerHTML = `<span style="color:#38bdf8; font-weight:700;">${elm.name} (${elm.sym})</span> &nbsp;•&nbsp; Điện tích hạt nhân: <strong>+${elm.z}</strong> &nbsp;•&nbsp; ${elm.shells.length} lớp electron: <strong>[${elm.shells.join(', ')}]</strong>`;
       }
 
-      document.querySelectorAll('.sim-btn').forEach(b => {
-        b.classList.toggle('active', b.textContent.includes(elm.name));
+      // Cap nhat active class chinh xac duy nhat 1 nut duoc chon
+      document.querySelectorAll('.sim-controls .sim-btn').forEach(b => {
+        const isSelected = b.getAttribute('data-sym') === symbol;
+        b.classList.toggle('active', isSelected);
       });
     }
 
