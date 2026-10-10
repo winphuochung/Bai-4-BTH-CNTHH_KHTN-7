@@ -1622,7 +1622,7 @@ html_head = """<!DOCTYPE html>
 
 html_tail = """
     // Google Apps Script Live Web App URL
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynefdy9sF4YOx3ZhFkI7-kkMdm8KpXG8Cd8OGqYPWh6XGVr_BMqa-19UwgJ4kQ70TL/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxK4Ka8fyqp6xkI26WEoxK7u_IkKytzIdvkqihue7LN_3vEda7Nc-ZvaTiIl4eVTfi/exec";
 
     // 20 First Elements for Interactive Periodic Table
     const ELEMENTS_20 = [

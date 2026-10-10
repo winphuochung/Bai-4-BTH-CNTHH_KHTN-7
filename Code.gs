@@ -1,5 +1,6 @@
 /**
  * ỨNG DỤNG HỌC TẬP: BẢNG TUẦN HOÀN CÁC NGUYÊN TỐ HÓA HỌC (KHTN 7)
+ * Live Web App URL: https://script.google.com/macros/s/AKfycbwxK4Ka8fyqp6xkI26WEoxK7u_IkKytzIdvkqihue7LN_3vEda7Nc-ZvaTiIl4eVTfi/exec
  * Hỗ trợ đồng bộ kết quả bài thi học sinh trực tiếp vào Google Sheets.
  */
 
