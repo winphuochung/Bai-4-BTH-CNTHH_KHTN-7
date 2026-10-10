@@ -19,7 +19,7 @@ html_head = """<!DOCTYPE html>
   <!-- Google Fonts & Font Awesome CDN -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Canvas-confetti & html2canvas -->
@@ -53,7 +53,7 @@ html_head = """<!DOCTYPE html>
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -337,12 +337,14 @@ html_head = """<!DOCTYPE html>
       border-radius: 28px;
     }
     .login-title {
+      font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', sans-serif;
       font-size: 1.7rem;
       font-weight: 800;
       margin-bottom: 0.5rem;
       background: linear-gradient(90deg, #38bdf8, #c084fc);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      letter-spacing: -0.01em;
     }
     .login-subtitle {
       color: var(--text-muted);
@@ -1134,16 +1136,16 @@ html_head = """<!DOCTYPE html>
           <span>Em cần đăng nhập trước để truy cập vào bài học và luyện tập!</span>
         </div>
 
-        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <form id="loginForm" onsubmit="handleLoginSubmit(event); return false;" autocomplete="off">
           <div class="form-group">
-            <label><i class="fa-solid fa-user"></i> Họ và Tên học sinh</label>
+            <label for="inputStudentName"><i class="fa-solid fa-user"></i> Họ và Tên học sinh</label>
             <input type="text" id="inputStudentName" class="form-control" placeholder="Ví dụ: Nguyễn Văn An" required autocomplete="name">
           </div>
           <div class="form-group">
-            <label><i class="fa-solid fa-school"></i> Lớp học</label>
+            <label for="inputStudentClass"><i class="fa-solid fa-school"></i> Lớp học</label>
             <input type="text" id="inputStudentClass" class="form-control" placeholder="Ví dụ: 7A1" required autocomplete="off">
           </div>
-          <button type="submit" class="btn-gradient" style="margin-top: 1rem;">
+          <button type="button" id="btnLoginSubmit" class="btn-gradient" style="margin-top: 1rem; width: 100%; cursor: pointer;" onclick="handleLoginSubmit(event)">
             <span>Vào Học Ngay</span>
             <i class="fa-solid fa-arrow-right"></i>
           </button>
@@ -1643,11 +1645,54 @@ html_tail = """
     }
 
     // =========================================================================
-    // 3. CORE STATE & USER SESSION (BẮT BUỘC ĐĂNG NHẬP)
+    // 3. CORE STATE & USER SESSION (AN TOÀN TRÊN MỌI MÔI TRƯỜNG & IFRAME)
     // =========================================================================
+    const safeStorage = {
+      _mem: {},
+      getItem(k) {
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            return window.localStorage.getItem(k);
+          }
+        } catch (e) {}
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            return window.sessionStorage.getItem(k);
+          }
+        } catch (e) {}
+        return this._mem[k] || null;
+      },
+      setItem(k, v) {
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem(k, v);
+          }
+        } catch (e) {}
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem(k, v);
+          }
+        } catch (e) {}
+        this._mem[k] = String(v);
+      },
+      removeItem(k) {
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.removeItem(k);
+          }
+        } catch (e) {}
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.removeItem(k);
+          }
+        } catch (e) {}
+        delete this._mem[k];
+      }
+    };
+
     let currentUser = {
-      name: localStorage.getItem('khtn7_user_name') || '',
-      className: localStorage.getItem('khtn7_user_class') || ''
+      name: safeStorage.getItem('khtn7_user_name') || '',
+      className: safeStorage.getItem('khtn7_user_class') || ''
     };
 
     let isLoggedIn = !!(currentUser.name && currentUser.className);
@@ -1663,10 +1708,34 @@ html_tail = """
     let activeMatchedPairs = {};
 
     document.addEventListener('DOMContentLoaded', () => {
-      renderPeriodicMiniTable();
-      initAtomSimulator();
-      renderLeaderboard();
-      loadQuestion();
+      try { renderPeriodicMiniTable(); } catch (e) { console.warn(e); }
+      try { initAtomSimulator(); } catch (e) { console.warn(e); }
+      try { renderLeaderboard(); } catch (e) { console.warn(e); }
+      try { loadQuestion(); } catch (e) { console.warn(e); }
+
+      // Gắn sự kiện phím Enter cho ô nhập tên & lớp
+      const nameInp = document.getElementById('inputStudentName');
+      const classInp = document.getElementById('inputStudentClass');
+      if (nameInp) {
+        nameInp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (classInp && !classInp.value.trim()) {
+              classInp.focus();
+            } else {
+              handleLoginSubmit(e);
+            }
+          }
+        });
+      }
+      if (classInp) {
+        classInp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleLoginSubmit(e);
+          }
+        });
+      }
 
       if (isLoggedIn) {
         initUserBadge();
@@ -1708,17 +1777,19 @@ html_tail = """
     }
 
     function handleLogout() {
-      if (confirm(`Em có chắc chắn muốn đăng xuất tài khoản "${currentUser.name}"?`)) {
-        localStorage.removeItem('khtn7_user_name');
-        localStorage.removeItem('khtn7_user_class');
+      if (confirm(`Em có chắc chắn muốn đăng xuất tài khoản "${currentUser.name || 'này'}"?`)) {
+        safeStorage.removeItem('khtn7_user_name');
+        safeStorage.removeItem('khtn7_user_class');
         currentUser = { name: '', className: '' };
         isLoggedIn = false;
         userAnswers = {};
         score = 0;
         currentIndex = 0;
 
-        document.getElementById('inputStudentName').value = '';
-        document.getElementById('inputStudentClass').value = '';
+        const inpName = document.getElementById('inputStudentName');
+        const inpClass = document.getElementById('inputStudentClass');
+        if (inpName) inpName.value = '';
+        if (inpClass) inpClass.value = '';
 
         initUserBadge();
         showLoginAlert(false);
@@ -1743,22 +1814,39 @@ html_tail = """
     }
 
     function handleLoginSubmit(e) {
-      e.preventDefault();
-      const name = document.getElementById('inputStudentName').value.trim();
-      const cls = document.getElementById('inputStudentClass').value.trim();
-      if (!name || !cls) {
-        showLoginAlert(true);
-        return;
+      if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
       }
-      currentUser.name = name;
-      currentUser.className = cls;
-      isLoggedIn = true;
-      localStorage.setItem('khtn7_user_name', name);
-      localStorage.setItem('khtn7_user_class', cls);
-      initUserBadge();
-      triggerConfetti();
-      showLoginAlert(false);
-      switchView('theory');
+      try {
+        const nameInput = document.getElementById('inputStudentName');
+        const classInput = document.getElementById('inputStudentClass');
+        const name = nameInput ? nameInput.value.trim() : '';
+        const cls = classInput ? classInput.value.trim() : '';
+
+        if (!name || !cls) {
+          showLoginAlert(true);
+          return false;
+        }
+
+        currentUser.name = name;
+        currentUser.className = cls;
+        isLoggedIn = true;
+
+        safeStorage.setItem('khtn7_user_name', name);
+        safeStorage.setItem('khtn7_user_class', cls);
+
+        initUserBadge();
+        try { triggerConfetti(); } catch (err) {}
+        showLoginAlert(false);
+        switchView('theory');
+        return false;
+      } catch (err) {
+        console.error("Login submit error:", err);
+        isLoggedIn = true;
+        switchView('theory');
+        return false;
+      }
     }
 
     function handleBrandClick() {
@@ -2274,7 +2362,7 @@ html_tail = """
     }
 
     function saveToLeaderboard(name, cls, userScore) {
-      let board = JSON.parse(localStorage.getItem('khtn7_leaderboard') || '[]');
+      let board = JSON.parse(safeStorage.getItem('khtn7_leaderboard') || '[]');
       board.push({
         name: name,
         cls: cls,
@@ -2283,13 +2371,13 @@ html_tail = """
       });
       board.sort((a, b) => b.score - a.score);
       board = board.slice(0, 5);
-      localStorage.setItem('khtn7_leaderboard', JSON.stringify(board));
+      safeStorage.setItem('khtn7_leaderboard', JSON.stringify(board));
     }
 
     function renderLeaderboard() {
       const container = document.getElementById('leaderboardList');
       if (!container) return;
-      const board = JSON.parse(localStorage.getItem('khtn7_leaderboard') || '[]');
+      const board = JSON.parse(safeStorage.getItem('khtn7_leaderboard') || '[]');
 
       if (board.length === 0) {
         container.innerHTML = `
@@ -2324,7 +2412,7 @@ html_tail = """
 
     function clearLeaderboardData() {
       if (confirm('Em có chắc chắn muốn xóa lịch sử bảng xếp hạng trên thiết bị này?')) {
-        localStorage.removeItem('khtn7_leaderboard');
+        safeStorage.removeItem('khtn7_leaderboard');
         renderLeaderboard();
       }
     }
