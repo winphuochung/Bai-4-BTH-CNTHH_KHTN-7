@@ -2305,8 +2305,7 @@ const QUIZ_DATA = [
       const url = APPS_SCRIPT_URL || window.location.href;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
-          alert('Đã sao chép liên kết Web App thành công!
-' + url);
+          alert('Đã sao chép liên kết Web App thành công!\n' + url);
         }).catch(() => {
           prompt('Sao chép đường link ứng dụng tại đây:', url);
         });
